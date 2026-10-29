@@ -38,8 +38,8 @@ Si el nombre exacto de la carpeta de Forever es distinto en tu instalación, usa
 
 ## Cómo funciona
 
-- Cada personaje se une a un canal oculto por continente (`FlechazoAddon<id>`) y cada minuto envía su perfil: raza, clase, nivel, posición redondeada a 10 yardas, foto elegida y descripción.
-- La foto no se envía como imagen: solo viaja una letra que indica cuál de los retratos del juego mostrar, así que no hay que renderizar al personaje. Lo hace con `SendAddonMessageLogged`, así que si alguien escribe algo ofensivo se puede denunciar a Blizzard.
+- Cada personaje se une a un canal oculto por continente (`FlechazoAddon<id>`) y cada minuto envía su perfil: raza, clase, nivel, posición redondeada a 10 yardas, foto elegida y descripción. Lo hace con `SendAddonMessageLogged`, así que si alguien escribe algo ofensivo se puede denunciar a Blizzard.
+- La foto no se envía como imagen: solo viaja una letra que indica cuál de los retratos del juego mostrar, así que no hay que renderizar al personaje.
 - Los likes se envían por susurro de addon solo a esa persona. Cada uno guarda sus likes, y cuando los dos coinciden aparece el match en ambos lados.
 - Los datos se guardan por personaje en `FlechazoCharDB`.
 
