@@ -20,8 +20,9 @@ Core.DEFAULT_SETTINGS = {
 
 Core.RADIUS_STEPS = { 100, 250, 500, 1000, 2000, 5000 }
 
--- Preset front-facing photos: the two race portraits the game ships (raceicon128-<race>-<variant>)
--- or the class icon. Only this one-letter code travels over the network.
+-- Front-facing photo: the race portrait the game ships for the character (raceicon128-<race>-<variant>).
+-- It is not chosen by the player; only this one-letter code travels over the network.
+-- "c" (class icon) is the fallback for unknown codes or races without a portrait.
 Core.PORTRAITS = { "m", "f", "c" }
 local PORTRAIT_VARIANT = { m = "male", f = "female" }
 
@@ -45,7 +46,7 @@ function Core.EnsureDB(db)
     db = type(db) == "table" and db or {}
     db.version = db.version or 1
     db.description = type(db.description) == "string" and db.description or ""
-    if not Core.IsPortrait(db.portrait) then db.portrait = nil end
+    db.portrait = nil   -- the photo used to be selectable; it is now always the character's own
     db.settings = type(db.settings) == "table" and db.settings or {}
     copyDefaults(db.settings, Core.DEFAULT_SETTINGS)
     for _, key in ipairs({ "liked", "likedBy", "rejected", "matches", "blocked" }) do

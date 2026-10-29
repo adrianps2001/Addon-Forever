@@ -21,9 +21,9 @@ function ns.GetProfile(name)
     return ns.demo[name] or ns.Comm.profiles[name]
 end
 
--- Chosen preset photo, defaulting to the race portrait that matches the character.
+-- The character's own race portrait. Only used to pick the right picture, never to filter anyone.
 function ns.MyPortrait()
-    return ns.db.portrait or (UnitSex("player") == 3 and "f" or "m")
+    return UnitSex("player") == 3 and "f" or "m"
 end
 
 function ns.Candidates()
@@ -67,7 +67,7 @@ local function loadDemo()
         { "Aria", 1, 8, 40, "Busco grupo para mazmorras por la tarde. ¡Me encanta pescar!", true, "f" },
         { "Brakk", 2, 1, 38, "Tanque tranquilo, juego de noche. Paciencia con los nuevos.", false, "m" },
         { "Lunethil", 4, 11, 42, "Druida curandera. Rol ligero y exploración.", true, "f" },
-        { "Tikka", 8, 3, 35, "Cazadora en busca de compis para subir de nivel.", false, "c" },
+        { "Tikka", 8, 3, 35, "Cazadora en busca de compis para subir de nivel.", false, "f" },
     }
     for i, e in ipairs(entries) do
         ns.demo[e[1] .. "-" .. realm] = {

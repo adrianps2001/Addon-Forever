@@ -64,9 +64,8 @@ test("portrait atlas names", function()
     eq(Core.PortraitAtlas("m", nil, "MAGE"), "classicon-mage")
 end)
 
-test("EnsureDB drops an invalid saved portrait", function()
-    eq(Core.EnsureDB({ portrait = "zz" }).portrait, nil)
-    eq(Core.EnsureDB({ portrait = "f" }).portrait, "f")
+test("EnsureDB drops the old selectable portrait setting", function()
+    eq(Core.EnsureDB({ portrait = "c" }).portrait, nil)
 end)
 
 test("distance only within the same instance", function()

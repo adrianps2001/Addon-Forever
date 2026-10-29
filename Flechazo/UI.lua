@@ -33,17 +33,23 @@ local function describe(p)
     return ("%s · %s · nivel %d"):format(raceName(p.raceID), colorByClass(ci.className, ci.classFile), p.level), ci
 end
 
--- Draws a player's chosen preset photo (race portrait or class icon) on a texture.
+-- Draws a player's front photo (their race portrait, or the class icon as fallback) on a texture.
+-- Returns true when the race portrait was used.
 local function setPortrait(tex, p)
     local race = C_CreatureInfo.GetRaceInfo(p.raceID)
     local classFile = classInfo(p.classID).classFile
     local atlas = Core.PortraitAtlas(p.portrait, race and race.clientFileString, classFile)
-    if not C_Texture.GetAtlasInfo(atlas) then atlas = Core.PortraitAtlas("c", nil, classFile) end
+    if C_Texture.GetAtlasInfo(atlas) then
+        tex:SetAtlas(atlas)
+        return atlas:find("^raceicon") ~= nil
+    end
+    atlas = Core.PortraitAtlas("c", nil, classFile)
     if C_Texture.GetAtlasInfo(atlas) then
         tex:SetAtlas(atlas)
     else
         tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     end
+    return false
 end
 
 local function button(parent, text, width, template)
@@ -75,9 +81,8 @@ local function showCard()
     w.info:SetText(info)
     w.distance:SetText(("a unas %d yardas"):format(math.floor(current.distance + 0.5)))
     w.desc:SetText(p.description ~= "" and p.description or "|cff888888(Sin descripción)|r")
-    setPortrait(w.photo, p)
     -- With a race portrait, a small class icon in the corner keeps the class visible at a glance.
-    w.badge:SetShown(p.portrait ~= "c")
+    w.badge:SetShown(setPortrait(w.photo, p))
     setPortrait(w.badge, { raceID = p.raceID, classID = p.classID, portrait = "c" })
 end
 
@@ -234,33 +239,6 @@ local function buildProfile(p)
     edit:SetScript("OnEscapePressed", function() edit:SetText(db.description) edit:ClearFocus() end)
     edit:SetScript("OnEditFocusLost", save)
 
-    place(label(p, "GameFontNormal", "Tu foto:"), 22)
-    local PHOTO_NAMES = { m = "Retrato 1", f = "Retrato 2", c = "Icono de clase" }
-    local prevPhoto = button(p, "<", 30)
-    prevPhoto:SetPoint("TOPLEFT", 14, y - 8)
-    local preview = p:CreateTexture(nil, "ARTWORK")
-    preview:SetSize(40, 40)
-    preview:SetPoint("LEFT", prevPhoto, "RIGHT", 10, 0)
-    local photoName = label(p, "GameFontHighlight")
-    photoName:SetPoint("LEFT", preview, "RIGHT", 10, 0)
-    photoName:SetWidth(110)
-    local nextPhoto = button(p, ">", 30)
-    nextPhoto:SetPoint("LEFT", photoName, "RIGHT", 6, 0)
-    y = y - 50
-    local function updatePhoto()
-        local me = ns.Comm.MyProfile()
-        setPortrait(preview, me)
-        photoName:SetText(PHOTO_NAMES[me.portrait])
-    end
-    local function cyclePhoto(delta)
-        local list, idx = Core.PORTRAITS, 1
-        for i, c in ipairs(list) do if c == ns.MyPortrait() then idx = i end end
-        db.portrait = list[(idx - 1 + delta) % #list + 1]
-        updatePhoto()
-    end
-    prevPhoto:SetScript("OnClick", function() cyclePhoto(-1) end)
-    nextPhoto:SetScript("OnClick", function() cyclePhoto(1) end)
-
     local check = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
     place(check, 36)
     local checkLabel = label(p, "GameFontHighlight", "Visible para otros jugadores")
@@ -298,7 +276,6 @@ local function buildProfile(p)
     p.Refresh = function()
         edit:SetText(db.description)
         check:SetChecked(db.settings.discoverable)
-        updatePhoto()
         updRadius()
         updLevel()
     end

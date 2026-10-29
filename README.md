@@ -29,7 +29,7 @@ Si el nombre exacto de la carpeta de Forever es distinto en tu instalación, usa
 
 1. **Solo, sin otra cuenta:** entra al juego, escribe `/fz demo` y prueba a dar like y a pasar, la pestaña *Matches* y el *Perfil*.
 2. **De verdad:** hacen falta **dos personajes con el addon**, normalmente de dos personas, en el mismo continente y fuera de instancias. Esperad unos 15 segundos tras entrar y abrid `/fz`. Cada uno debería ver al otro.
-3. **Foto:** cada jugador elige en *Perfil* su foto: Retrato 1 o Retrato 2 (los dos retratos de frente que trae el juego para su raza) o el icono de su clase. Se ve siempre, aunque el otro jugador esté lejos.
+3. **Foto:** cada personaje sale con su foto de frente: el retrato que trae el juego para su raza y su personaje. No se elige ni se configura, y se ve siempre, aunque el otro jugador esté lejos. Si alguna raza no tuviera retrato, se muestra el icono de su clase.
 4. **Pruebas fuera del juego** (lógica y un ensayo con una API de WoW simulada; necesitas Lua 5.1):
    ```
    lua5.1 tests/run_tests.lua
@@ -38,7 +38,7 @@ Si el nombre exacto de la carpeta de Forever es distinto en tu instalación, usa
 
 ## Cómo funciona
 
-- Cada personaje se une a un canal oculto por continente (`FlechazoAddon<id>`) y cada minuto envía su perfil: raza, clase, nivel, posición redondeada a 10 yardas, foto elegida y descripción. Lo hace con `SendAddonMessageLogged`, así que si alguien escribe algo ofensivo se puede denunciar a Blizzard.
+- Cada personaje se une a un canal oculto por continente (`FlechazoAddon<id>`) y cada minuto envía su perfil: raza, clase, nivel, posición redondeada a 10 yardas, qué retrato de su raza le corresponde y descripción. Lo hace con `SendAddonMessageLogged`, así que si alguien escribe algo ofensivo se puede denunciar a Blizzard.
 - La foto no se envía como imagen: solo viaja una letra que indica cuál de los retratos del juego mostrar, así que no hay que renderizar al personaje.
 - Los likes se envían por susurro de addon solo a esa persona. Cada uno guarda sus likes, y cuando los dos coinciden aparece el match en ambos lados.
 - Los datos se guardan por personaje en `FlechazoCharDB`.
