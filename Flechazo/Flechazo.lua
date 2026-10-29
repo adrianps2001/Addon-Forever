@@ -75,7 +75,13 @@ local function loadDemo()
             likesBack = e[6], distance = i * 40, seen = time() + 3600, instanceID = me.instanceID,
         }
     end
-    chat("Modo demo activado: 4 jugadores de prueba (Aria y Lunethil te devolverán el like).")
+    -- Your own character, to see what the real-face photo looks like.
+    ns.demo["Espejo-" .. realm] = {
+        demo = true, unit = "player", raceID = me.raceID, classID = me.classID, level = me.level,
+        portrait = me.portrait, description = "Así verán tu cara los demás cuando estés cerca.",
+        likesBack = false, distance = 0, seen = time() + 3600, instanceID = me.instanceID,
+    }
+    chat("Modo demo activado: 4 jugadores de prueba (Aria y Lunethil te devolverán el like) y \"Espejo\", que muestra tu propia cara real.")
 end
 
 local function clearDemo()

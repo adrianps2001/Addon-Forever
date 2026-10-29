@@ -37,6 +37,8 @@ _G.UnitRace = function() return "Humano", "Human", 1 end
 _G.UnitClass = function() return "Mago", "MAGE", 8 end
 _G.UnitLevel = function() return 40 end
 _G.UnitSex = function() return 3 end
+local portraitUnits = {}
+_G.SetPortraitTexture = function(_, unit) portraitUnits[#portraitUnits + 1] = unit end
 _G.UnitExists = function() return false end
 _G.InCombatLockdown = function() return false end
 _G.GetChannelName = function() return 5, "FlechazoAddon0" end
@@ -77,9 +79,11 @@ assert(ns.db and SlashCmdList.FLECHAZO, "addon did not initialize")
 fire("PLAYER_ENTERING_WORLD"); runTimers(); runTimers()
 assert(#sent >= 1 and sent[1].logged and sent[1][3] == "CHANNEL", "no hello broadcast")
 
--- Demo flow: like everyone, two of them like back.
+-- Demo flow: the mirror entry comes first and shows your real face; like everyone, two like back.
 SlashCmdList.FLECHAZO("demo")
-for _ = 1, 4 do
+assert(ns.Candidates()[1].name == "Espejo-Reino", "mirror entry should be first")
+assert(portraitUnits[#portraitUnits] == "player", "mirror card should draw the real portrait")
+for _ = 1, 5 do
     local c = ns.Candidates()[1]
     ns.Like(c.name)
 end

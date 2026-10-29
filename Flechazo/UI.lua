@@ -52,6 +52,39 @@ local function setPortrait(tex, p)
     return false
 end
 
+local function isSecret(v)
+    return issecretvalue and issecretvalue(v)
+end
+
+-- Finds a unit token for a player the client currently has loaded (near enough to be drawn).
+local function unitForName(name, profile)
+    if profile and profile.unit then return profile.unit end   -- demo entry showing yourself
+    local function same(unit)
+        if not UnitExists(unit) or not UnitIsPlayer(unit) then return false end
+        local n, r = UnitFullName(unit)
+        if isSecret(n) or isSecret(r) then return false end
+        return ns.Comm.FullName(n, r) == name
+    end
+    local units = { "target", "mouseover", "focus" }
+    for i = 1, 4 do units[#units + 1] = "party" .. i end
+    for i = 1, 40 do units[#units + 1] = "nameplate" .. i end
+    for _, unit in ipairs(units) do
+        local ok, found = pcall(same, unit)
+        if ok and found then return unit end
+    end
+end
+
+-- Draws the player's real face when their character is loaded nearby, otherwise their race portrait.
+-- Returns isReal, hasPortrait (false only when falling back to the class icon).
+local function drawPhoto(tex, name, p)
+    local unit = unitForName(name, p)
+    if unit and pcall(SetPortraitTexture, tex, unit) then
+        tex:SetTexCoord(0, 1, 0, 1)
+        return true, true
+    end
+    return false, setPortrait(tex, p)
+end
+
 local function button(parent, text, width, template)
     local b = CreateFrame("Button", nil, parent, template or "UIPanelButtonTemplate")
     b:SetSize(width, 24)
@@ -81,9 +114,21 @@ local function showCard()
     w.info:SetText(info)
     w.distance:SetText(("a unas %d yardas"):format(math.floor(current.distance + 0.5)))
     w.desc:SetText(p.description ~= "" and p.description or "|cff888888(Sin descripción)|r")
-    -- With a race portrait, a small class icon in the corner keeps the class visible at a glance.
-    w.badge:SetShown(setPortrait(w.photo, p))
     setPortrait(w.badge, { raceID = p.raceID, classID = p.classID, portrait = "c" })
+    w.real = false
+    UI.UpdatePhoto()
+end
+
+-- Upgrades the card to the real face as soon as the player shows up nearby. Once drawn it stays,
+-- even if they walk away, until the card changes.
+function UI.UpdatePhoto()
+    local w = cardWidgets
+    if not current or w.real then return end
+    local real, hasPortrait = drawPhoto(w.photo, current.name, current.profile)
+    w.real = real
+    -- With a portrait, a small class icon in the corner keeps the class visible at a glance.
+    w.badge:SetShown(hasPortrait)
+    w.photoNote:SetText(real and "Foto real" or "Su cara real aparecerá cuando esté cerca")
 end
 
 local function buildDiscover(p)
@@ -103,9 +148,11 @@ local function buildDiscover(p)
     w.badge = card:CreateTexture(nil, "OVERLAY")
     w.badge:SetSize(40, 40)
     w.badge:SetPoint("BOTTOMRIGHT", w.photo, "BOTTOMRIGHT", 6, -6)
+    w.photoNote = label(card, "GameFontDisableSmall")
+    w.photoNote:SetPoint("TOP", w.photo, "BOTTOM", 0, -4)
 
     w.name = label(card, "GameFontNormalLarge")
-    w.name:SetPoint("TOP", w.photo, "BOTTOM", 0, -16)
+    w.name:SetPoint("TOP", w.photoNote, "BOTTOM", 0, -8)
     w.info = label(card, "GameFontHighlight")
     w.info:SetPoint("TOP", w.name, "BOTTOM", 0, -4)
     w.distance = label(card, "GameFontDisableSmall")
@@ -131,6 +178,15 @@ local function buildDiscover(p)
 
     w.counter = label(p, "GameFontDisableSmall")
     w.counter:SetPoint("TOPRIGHT", -2, -2)
+
+    -- These events mean a new nearby player may have become drawable.
+    local ev = CreateFrame("Frame", nil, p)
+    for _, e in ipairs({ "PLAYER_TARGET_CHANGED", "UPDATE_MOUSEOVER_UNIT", "NAME_PLATE_UNIT_ADDED", "GROUP_ROSTER_UPDATE" }) do
+        ev:RegisterEvent(e)
+    end
+    ev:SetScript("OnEvent", function()
+        if p:IsVisible() then UI.UpdatePhoto() end
+    end)
 
     p.Refresh = showCard
 end
@@ -187,7 +243,7 @@ local function refreshMatches(p)
             local info, ci = describe(m)
             row.name:SetText(colorByClass(shortName(name), ci.classFile))
             row.info:SetText(info)
-            setPortrait(row.photo, m)
+            drawPhoto(row.photo, name, m)
             row.photo:Show()
         else
             row.name:SetText(shortName(name))
