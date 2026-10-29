@@ -1,0 +1,14 @@
+## Interface: 120105, 120107, 16001
+## Title: Flechazo
+## Notes: Descubre a jugadores cercanos que usan el addon. Dale like o pasa, y si hay match, jugad juntos.
+## Author: adrianps2001
+## Version: 0.1.0
+## Category: Social
+## IconTexture: Interface\Icons\INV_ValentinesCandy
+## AddonCompartmentFunc: Flechazo_OnAddonCompartmentClick
+## SavedVariablesPerCharacter: FlechazoCharDB
+
+Core.lua
+Comm.lua
+UI.lua
+Flechazo.lua
