@@ -49,6 +49,7 @@ function Comm.MyProfile()
         level = UnitLevel("player"),
         instanceID = instanceID,
         x = x, y = y,
+        portrait = ns.MyPortrait(),
         description = ns.db.description,
     }
 end

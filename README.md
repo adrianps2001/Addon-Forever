@@ -2,7 +2,7 @@
 
 Addon para **World of Warcraft: Forever** (también funciona en retail/Midnight) para conocer a otros jugadores cercanos:
 
-- Muestra a los jugadores que tienen el addon y están cerca de ti: **raza, clase, nivel, distancia, foto del personaje y una breve descripción**.
+- Muestra a los jugadores que tienen el addon y están cerca de ti: **raza, clase, nivel, distancia, foto de frente y una breve descripción**.
 - Puedes darles **like** o **pasar**.
 - Si os dais like mutuamente hay **match**: desde la pestaña *Matches* puedes agregarle como **amigo**, **invitarle al grupo** o **susurrarle**.
 - No distingue por género (ni real ni del personaje).
@@ -29,7 +29,7 @@ Si el nombre exacto de la carpeta de Forever es distinto en tu instalación, usa
 
 1. **Solo, sin otra cuenta:** entra al juego, escribe `/fz demo` y prueba a dar like y a pasar, la pestaña *Matches* y el *Perfil*.
 2. **De verdad:** hacen falta **dos personajes con el addon**, normalmente de dos personas, en el mismo continente y fuera de instancias. Esperad unos 15 segundos tras entrar y abrid `/fz`. Cada uno debería ver al otro.
-3. **Foto:** el modelo 3D solo se puede cargar si el otro jugador está lo bastante cerca para que el juego lo conozca. Pulsa **"Ver foto"** para seleccionarlo como objetivo; si está lejos se muestra el icono de su clase.
+3. **Foto:** cada jugador elige en *Perfil* su foto: Retrato 1 o Retrato 2 (los dos retratos de frente que trae el juego para su raza) o el icono de su clase. Se ve siempre, aunque el otro jugador esté lejos.
 4. **Pruebas fuera del juego** (lógica y un ensayo con una API de WoW simulada; necesitas Lua 5.1):
    ```
    lua5.1 tests/run_tests.lua
@@ -38,7 +38,8 @@ Si el nombre exacto de la carpeta de Forever es distinto en tu instalación, usa
 
 ## Cómo funciona
 
-- Cada personaje se une a un canal oculto por continente (`FlechazoAddon<id>`) y cada minuto envía su perfil: raza, clase, nivel, posición redondeada a 10 yardas y descripción. Lo hace con `SendAddonMessageLogged`, así que si alguien escribe algo ofensivo se puede denunciar a Blizzard.
+- Cada personaje se une a un canal oculto por continente (`FlechazoAddon<id>`) y cada minuto envía su perfil: raza, clase, nivel, posición redondeada a 10 yardas, foto elegida y descripción.
+- La foto no se envía como imagen: solo viaja una letra que indica cuál de los retratos del juego mostrar, así que no hay que renderizar al personaje. Lo hace con `SendAddonMessageLogged`, así que si alguien escribe algo ofensivo se puede denunciar a Blizzard.
 - Los likes se envían por susurro de addon solo a esa persona. Cada uno guarda sus likes, y cuando los dos coinciden aparece el match en ambos lados.
 - Los datos se guardan por personaje en `FlechazoCharDB`.
 

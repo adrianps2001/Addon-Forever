@@ -10,10 +10,6 @@ local frame, panels, tabs = nil, {}, {}
 local current            -- candidate currently shown on the card
 local cardWidgets = {}
 
-local function isSecret(v)
-    return issecretvalue and issecretvalue(v)
-end
-
 local function classInfo(classID)
     return C_CreatureInfo.GetClassInfo(classID) or { className = "?", classFile = "PRIEST" }
 end
@@ -37,20 +33,16 @@ local function describe(p)
     return ("%s · %s · nivel %d"):format(raceName(p.raceID), colorByClass(ci.className, ci.classFile), p.level), ci
 end
 
--- Finds a unit token for a player so their 3D model can be drawn (only works when they are near).
-local function unitForName(name)
-    local function same(unit)
-        if not UnitExists(unit) or not UnitIsPlayer(unit) then return false end
-        local n, r = UnitFullName(unit)
-        if isSecret(n) or isSecret(r) then return false end
-        return ns.Comm.FullName(n, r) == name
-    end
-    local units = { "target", "mouseover", "focus" }
-    for i = 1, 4 do units[#units + 1] = "party" .. i end
-    for i = 1, 40 do units[#units + 1] = "nameplate" .. i end
-    for _, unit in ipairs(units) do
-        local ok, found = pcall(same, unit)
-        if ok and found then return unit end
+-- Draws a player's chosen preset photo (race portrait or class icon) on a texture.
+local function setPortrait(tex, p)
+    local race = C_CreatureInfo.GetRaceInfo(p.raceID)
+    local classFile = classInfo(p.classID).classFile
+    local atlas = Core.PortraitAtlas(p.portrait, race and race.clientFileString, classFile)
+    if not C_Texture.GetAtlasInfo(atlas) then atlas = Core.PortraitAtlas("c", nil, classFile) end
+    if C_Texture.GetAtlasInfo(atlas) then
+        tex:SetAtlas(atlas)
+    else
+        tex:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
     end
 end
 
@@ -69,35 +61,6 @@ end
 
 ----------------------------------------------------------------------------- Discover
 
-local function updatePortrait()
-    local w = cardWidgets
-    if not current then return end
-    local unit = unitForName(current.name)
-    local ok = unit and pcall(w.model.SetUnit, w.model, unit)
-    w.model:SetShown(ok and true or false)
-    w.icon:SetShown(not ok)
-    w.photoHint:SetShown(not ok and not current.profile.demo)
-    if not ok then
-        local atlas = "classicon-" .. classInfo(current.profile.classID).classFile:lower()
-        if C_Texture.GetAtlasInfo(atlas) then
-            w.icon:SetAtlas(atlas)
-        else
-            w.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-        end
-    end
-end
-
-local function updateTargetButton()
-    local b = cardWidgets.target
-    if InCombatLockdown() then return end   -- secure attributes can't change in combat
-    if current and not current.profile.demo then
-        b:SetAttribute("macrotext", "/targetexact " .. current.name)
-        b:Show()
-    else
-        b:Hide()
-    end
-end
-
 local function showCard()
     local w = cardWidgets
     local list = ns.Candidates()
@@ -105,7 +68,6 @@ local function showCard()
     w.empty:SetShown(not current)
     w.card:SetShown(current and true or false)
     w.counter:SetText(current and ("%d cerca"):format(#list) or "")
-    updateTargetButton()
     if not current then return end
     local p = current.profile
     local info, ci = describe(p)
@@ -113,7 +75,10 @@ local function showCard()
     w.info:SetText(info)
     w.distance:SetText(("a unas %d yardas"):format(math.floor(current.distance + 0.5)))
     w.desc:SetText(p.description ~= "" and p.description or "|cff888888(Sin descripción)|r")
-    updatePortrait()
+    setPortrait(w.photo, p)
+    -- With a race portrait, a small class icon in the corner keeps the class visible at a glance.
+    w.badge:SetShown(p.portrait ~= "c")
+    setPortrait(w.badge, { raceID = p.raceID, classID = p.classID, portrait = "c" })
 end
 
 local function buildDiscover(p)
@@ -127,18 +92,15 @@ local function buildDiscover(p)
     card:SetAllPoints()
     w.card = card
 
-    w.model = CreateFrame("PlayerModel", nil, card)
-    w.model:SetSize(260, 220)
-    w.model:SetPoint("TOP", 0, -6)
-    w.icon = card:CreateTexture(nil, "ARTWORK")
-    w.icon:SetSize(96, 96)
-    w.icon:SetPoint("CENTER", w.model, "CENTER")
-    w.photoHint = label(card, "GameFontDisableSmall", "Pulsa \"Ver foto\" cuando esté cerca para cargar su modelo")
-    w.photoHint:SetPoint("TOP", w.icon, "BOTTOM", 0, -8)
-    w.photoHint:SetWidth(260)
+    w.photo = card:CreateTexture(nil, "ARTWORK")
+    w.photo:SetSize(160, 160)
+    w.photo:SetPoint("TOP", 0, -24)
+    w.badge = card:CreateTexture(nil, "OVERLAY")
+    w.badge:SetSize(40, 40)
+    w.badge:SetPoint("BOTTOMRIGHT", w.photo, "BOTTOMRIGHT", 6, -6)
 
     w.name = label(card, "GameFontNormalLarge")
-    w.name:SetPoint("TOP", w.model, "BOTTOM", 0, -8)
+    w.name:SetPoint("TOP", w.photo, "BOTTOM", 0, -16)
     w.info = label(card, "GameFontHighlight")
     w.info:SetPoint("TOP", w.name, "BOTTOM", 0, -4)
     w.distance = label(card, "GameFontDisableSmall")
@@ -162,27 +124,9 @@ local function buildDiscover(p)
         showCard()
     end)
 
-    -- Secure button: targeting someone by name is only allowed through a real click.
-    local target = CreateFrame("Button", "FlechazoTargetButton", p, "SecureActionButtonTemplate, UIPanelButtonTemplate")
-    target:SetSize(90, 22)
-    target:SetText("Ver foto")
-    target:SetPoint("BOTTOM", 0, 42)
-    target:SetAttribute("type", "macro")
-    target:RegisterForClicks("AnyUp", "AnyDown")
-    w.target = target
-
     w.counter = label(p, "GameFontDisableSmall")
     w.counter:SetPoint("TOPRIGHT", -2, -2)
 
-    local ev = CreateFrame("Frame", nil, p)
-    ev:RegisterEvent("PLAYER_TARGET_CHANGED")
-    ev:RegisterEvent("NAME_PLATE_UNIT_ADDED")
-    ev:RegisterEvent("UPDATE_MOUSEOVER_UNIT")
-    ev:RegisterEvent("PLAYER_REGEN_ENABLED")
-    ev:SetScript("OnEvent", function(_, event)
-        if not p:IsVisible() then return end
-        if event == "PLAYER_REGEN_ENABLED" then updateTargetButton() else updatePortrait() end
-    end)
     p.Refresh = showCard
 end
 
@@ -204,8 +148,11 @@ local function makeRow(parent, i)
     local row = CreateFrame("Frame", nil, parent)
     row:SetSize(290, 58)
     row:SetPoint("TOPLEFT", 0, -(i - 1) * 60)
+    row.photo = row:CreateTexture(nil, "ARTWORK")
+    row.photo:SetSize(30, 30)
+    row.photo:SetPoint("TOPLEFT", 2, -1)
     row.name = label(row, "GameFontNormal")
-    row.name:SetPoint("TOPLEFT", 4, -2)
+    row.name:SetPoint("TOPLEFT", row.photo, "TOPRIGHT", 6, -1)
     row.info = label(row, "GameFontHighlightSmall")
     row.info:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -2)
     local actions = {
@@ -235,9 +182,12 @@ local function refreshMatches(p)
             local info, ci = describe(m)
             row.name:SetText(colorByClass(shortName(name), ci.classFile))
             row.info:SetText(info)
+            setPortrait(row.photo, m)
+            row.photo:Show()
         else
             row.name:SetText(shortName(name))
             row.info:SetText("")
+            row.photo:Hide()
         end
         row:Show()
     end
@@ -284,6 +234,33 @@ local function buildProfile(p)
     edit:SetScript("OnEscapePressed", function() edit:SetText(db.description) edit:ClearFocus() end)
     edit:SetScript("OnEditFocusLost", save)
 
+    place(label(p, "GameFontNormal", "Tu foto:"), 22)
+    local PHOTO_NAMES = { m = "Retrato 1", f = "Retrato 2", c = "Icono de clase" }
+    local prevPhoto = button(p, "<", 30)
+    prevPhoto:SetPoint("TOPLEFT", 14, y - 8)
+    local preview = p:CreateTexture(nil, "ARTWORK")
+    preview:SetSize(40, 40)
+    preview:SetPoint("LEFT", prevPhoto, "RIGHT", 10, 0)
+    local photoName = label(p, "GameFontHighlight")
+    photoName:SetPoint("LEFT", preview, "RIGHT", 10, 0)
+    photoName:SetWidth(110)
+    local nextPhoto = button(p, ">", 30)
+    nextPhoto:SetPoint("LEFT", photoName, "RIGHT", 6, 0)
+    y = y - 50
+    local function updatePhoto()
+        local me = ns.Comm.MyProfile()
+        setPortrait(preview, me)
+        photoName:SetText(PHOTO_NAMES[me.portrait])
+    end
+    local function cyclePhoto(delta)
+        local list, idx = Core.PORTRAITS, 1
+        for i, c in ipairs(list) do if c == ns.MyPortrait() then idx = i end end
+        db.portrait = list[(idx - 1 + delta) % #list + 1]
+        updatePhoto()
+    end
+    prevPhoto:SetScript("OnClick", function() cyclePhoto(-1) end)
+    nextPhoto:SetScript("OnClick", function() cyclePhoto(1) end)
+
     local check = CreateFrame("CheckButton", nil, p, "UICheckButtonTemplate")
     place(check, 36)
     local checkLabel = label(p, "GameFontHighlight", "Visible para otros jugadores")
@@ -321,6 +298,7 @@ local function buildProfile(p)
     p.Refresh = function()
         edit:SetText(db.description)
         check:SetChecked(db.settings.discoverable)
+        updatePhoto()
         updRadius()
         updLevel()
     end

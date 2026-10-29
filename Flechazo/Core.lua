@@ -5,7 +5,7 @@ ns = ns or {}
 local Core = {}
 ns.Core = Core
 
-Core.PROTOCOL = 1
+Core.PROTOCOL = 2
 Core.SEP = "~"
 Core.MAX_DESC_BYTES = 80
 Core.PROFILE_TTL = 180            -- seconds a received profile stays valid
@@ -19,6 +19,20 @@ Core.DEFAULT_SETTINGS = {
 }
 
 Core.RADIUS_STEPS = { 100, 250, 500, 1000, 2000, 5000 }
+
+-- Preset front-facing photos: the two race portraits the game ships (raceicon128-<race>-<variant>)
+-- or the class icon. Only this one-letter code travels over the network.
+Core.PORTRAITS = { "m", "f", "c" }
+local PORTRAIT_VARIANT = { m = "male", f = "female" }
+
+-- clientFileString from C_CreatureInfo.GetRaceInfo -> atlas race slug, where they differ.
+local RACE_SLUGS = {
+    scourge = "undead",
+    highmountaintauren = "highmountain",
+    lightforgeddraenei = "lightforged",
+    zandalaritroll = "zandalari",
+    earthendwarf = "earthen",
+}
 Core.LEVEL_DIFF_STEPS = { 0, 3, 5, 10, 20 }
 
 local function copyDefaults(dst, src)
@@ -31,12 +45,30 @@ function Core.EnsureDB(db)
     db = type(db) == "table" and db or {}
     db.version = db.version or 1
     db.description = type(db.description) == "string" and db.description or ""
+    if not Core.IsPortrait(db.portrait) then db.portrait = nil end
     db.settings = type(db.settings) == "table" and db.settings or {}
     copyDefaults(db.settings, Core.DEFAULT_SETTINGS)
     for _, key in ipairs({ "liked", "likedBy", "rejected", "matches", "blocked" }) do
         if type(db[key]) ~= "table" then db[key] = {} end
     end
     return db
+end
+
+function Core.IsPortrait(code)
+    for _, c in ipairs(Core.PORTRAITS) do
+        if c == code then return true end
+    end
+    return false
+end
+
+-- Returns the atlas name for a portrait code, given the race clientFileString and the class file.
+function Core.PortraitAtlas(code, raceFile, classFile)
+    local variant = PORTRAIT_VARIANT[code]
+    if variant and raceFile then
+        local slug = raceFile:lower()
+        return "raceicon128-" .. (RACE_SLUGS[slug] or slug) .. "-" .. variant
+    end
+    return "classicon-" .. (classFile or "warrior"):lower()
 end
 
 -- Cuts a string to at most maxBytes without splitting a UTF-8 character.
@@ -75,13 +107,14 @@ local function roundToGrid(v)
 end
 
 -- Message formats (all fields separated by SEP):
---   H~proto~raceID~classID~level~instanceID~x~y~description   profile broadcast
+--   H~proto~raceID~classID~level~instanceID~x~y~portrait~description   profile broadcast
 --   Q~proto                                                  ask nearby players to broadcast
 --   L~proto                                                  like (sent by whisper)
 function Core.EncodeHello(p)
     return table.concat({
         "H", Core.PROTOCOL, p.raceID, p.classID, p.level, p.instanceID,
-        roundToGrid(p.x), roundToGrid(p.y), Core.SanitizeDescription(p.description),
+        roundToGrid(p.x), roundToGrid(p.y), Core.IsPortrait(p.portrait) and p.portrait or "c",
+        Core.SanitizeDescription(p.description),
     }, Core.SEP)
 end
 
@@ -101,7 +134,7 @@ function Core.Decode(msg)
     if proto ~= Core.PROTOCOL then return nil end
     if kind == "Q" or kind == "L" then
         return kind
-    elseif kind == "H" and #parts == 9 then
+    elseif kind == "H" and #parts == 10 then
         local p = {
             raceID = tonumber(parts[3]),
             classID = tonumber(parts[4]),
@@ -109,7 +142,8 @@ function Core.Decode(msg)
             instanceID = tonumber(parts[6]),
             x = tonumber(parts[7]),
             y = tonumber(parts[8]),
-            description = Core.SanitizeDescription(parts[9]),
+            portrait = Core.IsPortrait(parts[9]) and parts[9] or "c",
+            description = Core.SanitizeDescription(parts[10]),
         }
         if not (p.raceID and p.classID and p.level and p.instanceID and p.x and p.y) then
             return nil
@@ -131,6 +165,7 @@ local function snapshot(profile)
         raceID = profile.raceID,
         classID = profile.classID,
         level = profile.level,
+        portrait = profile.portrait,
         description = profile.description,
     }
 end

@@ -21,6 +21,11 @@ function ns.GetProfile(name)
     return ns.demo[name] or ns.Comm.profiles[name]
 end
 
+-- Chosen preset photo, defaulting to the race portrait that matches the character.
+function ns.MyPortrait()
+    return ns.db.portrait or (UnitSex("player") == 3 and "f" or "m")
+end
+
 function ns.Candidates()
     local me = ns.Comm.MyProfile()
     return Core.Candidates(ns.db, ns.AllProfiles(), me, time())
@@ -59,14 +64,14 @@ local function loadDemo()
     local me = ns.Comm.MyProfile()
     local realm = GetNormalizedRealmName() or "Demo"
     local entries = {
-        { "Aria", 1, 8, 40, "Busco grupo para mazmorras por la tarde. ¡Me encanta pescar!", true },
-        { "Brakk", 2, 1, 38, "Tanque tranquilo, juego de noche. Paciencia con los nuevos.", false },
-        { "Lunethil", 4, 11, 42, "Druida curandera. Rol ligero y exploración.", true },
-        { "Tikka", 8, 3, 35, "Cazadora en busca de compis para subir de nivel.", false },
+        { "Aria", 1, 8, 40, "Busco grupo para mazmorras por la tarde. ¡Me encanta pescar!", true, "f" },
+        { "Brakk", 2, 1, 38, "Tanque tranquilo, juego de noche. Paciencia con los nuevos.", false, "m" },
+        { "Lunethil", 4, 11, 42, "Druida curandera. Rol ligero y exploración.", true, "f" },
+        { "Tikka", 8, 3, 35, "Cazadora en busca de compis para subir de nivel.", false, "c" },
     }
     for i, e in ipairs(entries) do
         ns.demo[e[1] .. "-" .. realm] = {
-            demo = true, raceID = e[2], classID = e[3], level = e[4], description = e[5],
+            demo = true, raceID = e[2], classID = e[3], level = e[4], description = e[5], portrait = e[7],
             likesBack = e[6], distance = i * 40, seen = time() + 3600, instanceID = me.instanceID,
         }
     end

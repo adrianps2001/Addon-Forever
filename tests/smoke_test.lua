@@ -36,6 +36,7 @@ _G.GetNormalizedRealmName = function() return "Reino" end
 _G.UnitRace = function() return "Humano", "Human", 1 end
 _G.UnitClass = function() return "Mago", "MAGE", 8 end
 _G.UnitLevel = function() return 40 end
+_G.UnitSex = function() return 3 end
 _G.UnitExists = function() return false end
 _G.InCombatLockdown = function() return false end
 _G.GetChannelName = function() return 5, "FlechazoAddon0" end
@@ -52,7 +53,7 @@ _G.C_ChatInfo = {
 }
 _G.C_CreatureInfo = {
     GetClassInfo = function(id) return { className = "Clase" .. id, classFile = "MAGE" } end,
-    GetRaceInfo = function(id) return { raceName = "Raza" .. id } end,
+    GetRaceInfo = function(id) return { raceName = "Raza" .. id, clientFileString = "Human" } end,
 }
 _G.C_ClassColor = { GetClassColor = function() return { WrapTextInColorCode = function(_, t) return t end } end }
 _G.C_Texture = { GetAtlasInfo = function() return {} end }
@@ -88,7 +89,9 @@ SlashCmdList.FLECHAZO("demo")   -- clears demo data
 assert(next(ns.db.matches) == nil)
 
 -- Network flow: another player broadcasts, I like them, they like me back.
-local hello = ns.Core.EncodeHello({ raceID = 2, classID = 1, level = 41, instanceID = 0, x = -8850, y = 520, description = "Hola" })
+assert(ns.Core.Decode(sent[1][2]), "own hello not decodable")
+assert(select(2, ns.Core.Decode(sent[1][2])).portrait == "f", "default portrait should follow the character")
+local hello = ns.Core.EncodeHello({ raceID = 2, classID = 1, level = 41, instanceID = 0, x = -8850, y = 520, portrait = "m", description = "Hola" })
 fire("CHAT_MSG_ADDON_LOGGED", "FLECHAZO", hello, "CHANNEL", "Otro-Reino")
 local c = ns.Candidates()
 assert(#c == 1 and c[1].name == "Otro-Reino", "remote profile not listed")
